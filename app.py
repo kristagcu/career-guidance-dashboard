@@ -35,10 +35,34 @@ Along the way, you'll see an explanation of what influenced the prediction and s
 # -------------------------
 # Load trained artifacts
 # -------------------------
-model = pickle.load(open('rf_group_model.pkl', 'rb'))
+import gdown
+import os
+
+model_path = 'rf_group_model.pkl'
+gdrive_file_id = '1qsUR7b3bSdy2a1ep75cYClCxl8b9bj9v'
+gdrive_url = f'https://drive.google.com/uc?id={gdrive_file_id}'
+
+# First check: is the file already downloaded?
+if not os.path.exists(model_path):
+    try:
+        gdown.download(gdrive_url, model_path, quiet=False)
+    except Exception as e:
+        st.error(f"❌ Failed to download model from Google Drive: {e}")
+        st.stop()
+
+# Now load the model
+try:
+    with open(model_path, 'rb') as f:
+        model = pickle.load(f)
+except Exception as e:
+    st.error(f"❌ Failed to load model: {e}")
+    st.stop()
+
+# Load the rest
 scaler = pickle.load(open('scaler.pkl', 'rb'))
 encoder = pickle.load(open('label_encoder.pkl', 'rb'))
 explainer = shap.TreeExplainer(model)
+
 
 # -------------------------
 # Feature list
