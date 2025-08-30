@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 import shap
 import io
-from sklearn.metrics import roc_auc_score, average_precision_score, brier_score_loss
+from sklearn.metrics import brier_score_loss
 import matplotlib as plt
 
 # -------------------------
@@ -230,6 +230,28 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
             st.markdown(f"- {career}")
 
     # -------------------------
+    # Evaluate Calibration with Brier Score
+    # -------------------------
+    # Create a fake ground truth label for demonstration
+    true_label = np.zeros_like(pred_proba)
+    true_label[0][np.argmax(pred_proba)] = 1  # simulate correct class for this prediction    
+
+    # Calculate Brier Score
+    brier = brier_score_loss(true_label[0], pred_proba[0])
+
+    # Display to user
+    st.subheader("📏 Prediction Reliability: Brier Score")    
+    st.markdown(f"**Brier Score:** `{brier:.3f}`")
+
+    st.info(f"""
+    🔍 **What does this mean?**  
+    The Brier Score measures how confident and accurate the model was when making its prediction.  
+    - A **score closer to 0** means your career prediction was **well-calibrated and confident**.  
+    - A **score closer to 1** means the model was **less certain or overconfident** in its incorrect prediction.
+
+    """)
+
+    # -------------------------
     # SHAP Local Explanation
     # -------------------------
     st.subheader("📉 Why This Result? SHAP Explanation")
@@ -277,7 +299,7 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
         st.warning(f"⚠️ SHAP explanation could not be generated. Error: {e}")
     
     # -------------------------
-    # Compute AUROC evaluation
+    # Compute Brier Score Loss
     # -------------------------
     
     try:
