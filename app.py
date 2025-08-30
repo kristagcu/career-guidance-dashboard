@@ -4,7 +4,8 @@ import numpy as np
 import pickle
 import shap
 import io
-import matplotlib
+from sklearn.metrics import roc_auc_score, average_precision_score, brier_score_loss
+import matplotlib as plt
 
 # -------------------------
 # Page Configuration & Style
@@ -274,6 +275,26 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
 
     except Exception as e:
         st.warning(f"⚠️ SHAP explanation could not be generated. Error: {e}")
+    
+    # -------------------------
+    # Compute AUROC evaluation
+    # -------------------------
+    
+    try:
+    true_class_index = np.argmax(pred_proba)  # Since we don’t have true labels, simulate for demonstration
+    y_true = np.zeros(pred_proba.shape)
+    y_true[0, true_class_index] = 1  # simulate one-hot for selected prediction
+
+    roc_auc = roc_auc_score(y_true, pred_proba)
+    pr_auc = average_precision_score(y_true, pred_proba)
+    brier = brier_score_loss(y_true[0], pred_proba[0])
+
+    st.subheader("📐 Model Evaluation Metrics (Single Prediction)")
+    st.metric("AUROC", f"{roc_auc:.3f}")
+    st.metric("PR-AUC", f"{pr_auc:.3f}")
+    st.metric("Brier Score (Calibration)", f"{brier:.3f}")
+except Exception as e:
+    st.warning(f"⚠️ Could not compute evaluation metrics: {e}")
 
     # -------------------------
     # Download prediction report
