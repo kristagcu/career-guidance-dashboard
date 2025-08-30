@@ -239,7 +239,7 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
     if confidence < 0.50:
         second_best_index = np.argsort(pred_proba[0])[-2]
         second_best_label = encoder.inverse_transform([second_best_index])[0]
-        st.markdown(f"🔁 Since confidence is under 50%, you may also want to explore: **{second_best_label}** as a possible fit.")
+        st.markdown(f"🔁 Since confidence is under 50%, you had a second category you may also want to explore: **{second_best_label}** is a another possible fit.")
 
     # -------------------------
     # Brier Score Explanation
@@ -291,55 +291,6 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
         ))
     except Exception as e:
         st.warning(f"⚠️ SHAP explanation could not be generated. Error: {e}")
-
-
-    # -------------------------
-    # SHAP Local Explanation
-    # -------------------------
-    st.subheader("📉 Why This Result? SHAP Explanation")
-    st.write("""
-    You've just seen a prediction based on a blend of your technical and soft skill scores.  
-    This chart breaks down which of those inputs most strongly influenced the model's decision.
-
-    - Red bars = features that increased the prediction for this career group  
-    - Blue bars = features that decreased the prediction  
-    - Longer bars = stronger influence  
-    """)
-
-    try:
-        shap_values = explainer.shap_values(scaled_input)
-
-        # Handle multi-class classification
-        if isinstance(shap_values, list):
-            class_index = list(model.classes_).index(pred[0])
-            # Get SHAP values for the first sample and first output dimension
-            if shap_values[class_index][0].ndim == 2:
-                shap_input = shap_values[class_index][0][:, 0]  # Take first column
-            else:
-                shap_input = shap_values[class_index][0]
-            expected_value = explainer.expected_value[class_index]
-        else:
-            # For binary or single-output models
-            if shap_values[0].ndim == 2:
-                shap_input = shap_values[0][:, 0]
-            else:
-                shap_input = shap_values[0]
-            expected_value = explainer.expected_value if np.isscalar(explainer.expected_value) else explainer.expected_value[0]
-
-        # Final sanity check: shap_input must be 1D
-        shap_input = np.array(shap_input).flatten()
-
-        # Plot waterfall
-        st.pyplot(shap.plots._waterfall.waterfall_legacy(
-            expected_value,
-            shap_input,
-            feature_names=FEATURES,
-            show=False
-        ))
-
-    except Exception as e:
-        st.warning(f"⚠️ SHAP explanation could not be generated. Error: {e}")
-    
 
     # -------------------------
     # Download prediction report
