@@ -239,7 +239,7 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
     if confidence < 0.50:
         second_best_index = np.argsort(pred_proba[0])[-2]
         second_best_label = encoder.inverse_transform([second_best_index])[0]
-        st.markdown(f"🔁 Since confidence is under 50%, you had a second category you may also want to explore: **{second_best_label}** is a another possible fit.")
+        st.markdown(f"🔁 Since confidence is under 50%, you had a second category you may also want to explore: **{second_best_label}** is a close second as your suggested career category.")
 
     # -------------------------
     # Brier Score Explanation
