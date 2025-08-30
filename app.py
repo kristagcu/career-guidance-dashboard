@@ -208,6 +208,8 @@ for feature in FEATURES:
 # -------------------------
 # Predict
 # -------------------------
+from sklearn.metrics import brier_score_loss
+
 if st.button("🔮 Predict Career Group", key="predict_button"):
     df_input = pd.DataFrame([input_data])
     scaled_input = scaler.transform(df_input)
@@ -218,9 +220,11 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
     confidence = np.max(pred_proba)
 
     st.markdown("## 📘 Your Career Story Begins Here")
-    st.write("You've entered scores across technical and soft skills. Based on those, this system analyzes your profile and identifies which career group aligns best with your strengths.")
+    st.write("You've entered scores across technical and soft skill areas. Based on those, our AI model analyzed your profile to suggest a matching career group.")
 
-    # Prediction Output
+    # -------------------------
+    # Show Primary Prediction
+    # -------------------------
     st.markdown(f"### 🏷️ Predicted Career Group: <span style='color:darkblue'>{predicted_group}</span>", unsafe_allow_html=True)
     st.metric(label="Prediction Confidence", value=f"{confidence:.2f}")
 
@@ -228,6 +232,66 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
         st.write("### 🚀 Suggested Career Paths in this Category:")
         for career in career_options[predicted_group]:
             st.markdown(f"- {career}")
+
+    # -------------------------
+    # Suggest Backup Option if Confidence is Low
+    # -------------------------
+    if confidence < 0.50:
+        second_best_index = np.argsort(pred_proba[0])[-2]
+        second_best_label = encoder.inverse_transform([second_best_index])[0]
+        st.markdown(f"🔁 Since confidence is under 50%, you may also want to explore: **{second_best_label}** as a possible fit.")
+
+    # -------------------------
+    # Brier Score Explanation
+    # -------------------------
+    true_label = np.zeros(pred_proba.shape[1])
+    true_label[np.argmax(pred_proba)] = 1  # simulate correct class for demo
+    brier = brier_score_loss(true_label, pred_proba.flatten())
+
+    st.subheader("📏 Prediction Reliability: Brier Score")
+    st.markdown(f"**Brier Score:** `{brier:.3f}`")
+    st.markdown("""
+    🔍 **What does this mean?**  
+    The Brier Score tells us how reliable the model was when assigning probabilities to the possible outcomes.
+
+    - A score **closer to 0** means the prediction was well-calibrated and thoughtful  
+    - A score **closer to 1** means the model may have been uncertain or overly confident  
+
+    This helps us measure trustworthiness beyond just raw confidence. Even if your match had low confidence, a good Brier Score suggests the model is being cautious and accurate.
+    """)
+
+    # -------------------------
+    # SHAP Explanation
+    # -------------------------
+    st.subheader("📉 Why This Result? SHAP Explanation")
+    try:
+        shap_values = explainer.shap_values(scaled_input)
+
+        if isinstance(shap_values, list):
+            class_index = list(model.classes_).index(pred[0])
+            if shap_values[class_index][0].ndim == 2:
+                shap_input = shap_values[class_index][0][:, 0]
+            else:
+                shap_input = shap_values[class_index][0]
+            expected_value = explainer.expected_value[class_index]
+        else:
+            if shap_values[0].ndim == 2:
+                shap_input = shap_values[0][:, 0]
+            else:
+                shap_input = shap_values[0]
+            expected_value = explainer.expected_value if np.isscalar(explainer.expected_value) else explainer.expected_value[0]
+
+        shap_input = np.array(shap_input).flatten()
+
+        st.pyplot(shap.plots._waterfall.waterfall_legacy(
+            expected_value,
+            shap_input,
+            feature_names=FEATURES,
+            show=False
+        ))
+    except Exception as e:
+        st.warning(f"⚠️ SHAP explanation could not be generated. Error: {e}")
+
 
     # -------------------------
     # SHAP Local Explanation
@@ -276,25 +340,6 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
     except Exception as e:
         st.warning(f"⚠️ SHAP explanation could not be generated. Error: {e}")
     
-    # -------------------------
-    # Compute Brier Score Loss
-    # -------------------------
-    
-    try:
-        true_class_index = np.argmax(pred_proba)  # Since we don’t have true labels, simulate for demonstration
-        y_true = np.zeros(pred_proba.shape)
-        y_true[0, true_class_index] = 1  # simulate one-hot for selected prediction
-
-        roc_auc = roc_auc_score(y_true, pred_proba)
-        pr_auc = average_precision_score(y_true, pred_proba)
-        brier = brier_score_loss(y_true[0], pred_proba[0])
-
-        st.subheader("📐 Model Evaluation Metrics (Single Prediction)")
-        st.metric("AUROC", f"{roc_auc:.3f}")
-        st.metric("PR-AUC", f"{pr_auc:.3f}")
-        st.metric("Brier Score (Calibration)", f"{brier:.3f}")
-    except Exception as e:
-        st.warning(f"⚠️ Could not compute evaluation metrics: {e}")
 
     # -------------------------
     # Download prediction report
