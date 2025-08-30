@@ -299,11 +299,28 @@ if st.button("🔮 Predict Career Group", key="predict_button"):
         "Feature": FEATURES,
         "Value": df_input.values[0]
     })
-    report_df.loc[len(report_df)] = ["Predicted Group", predicted_group]
-    report_df.loc[len(report_df)] = ["Confidence", confidence]
 
+    # Append main prediction
+    report_df.loc[len(report_df)] = ["Predicted Group", predicted_group]
+    report_df.loc[len(report_df)] = ["Confidence Score", confidence]
+
+    # Add career options for primary group
+    report_df.loc[len(report_df)] = ["Suggested Careers", ", ".join(career_options[predicted_group])]    
+
+    # Add second-best group if confidence is low
+    if confidence < 0.50:
+        second_best_index = np.argsort(pred_proba[0])[-2]
+        second_best_group = encoder.inverse_transform([second_best_index])[0]
+        second_group_careers = career_options.get(second_best_group, [])
+        report_df.loc[len(report_df)] = ["Alternate Group (low confidence)", second_best_group]
+        report_df.loc[len(report_df)] = ["Suggested Careers (Alternate)", ", ".join(second_group_careers)]
+
+    # Add Brier Score
+    report_df.loc[len(report_df)] = ["Brier Score", f"{brier:.3f}"]
+
+    # Download button
     csv = report_df.to_csv(index=False).encode('utf-8')
-    st.download_button(
+    st.download_button(    
         label="📥 Download Prediction Report",
         data=csv,
         file_name='prediction_report.csv',
